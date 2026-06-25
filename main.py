@@ -83,18 +83,31 @@ async def analyze(file: UploadFile = File(...)):
             )
 
         data = response.json()
+
+        # Debug: return raw if unexpected format
+        if "choices" not in data:
+            raise HTTPException(status_code=500, detail=f"Groq error: {json.dumps(data)}")
+
         text = data["choices"][0]["message"]["content"].strip()
-        
-        # Strip markdown if present
-        if text.startswith("```"):
+
+        # Strip markdown code block if present
+        if "```" in text:
             text = text.split("```")[1]
             if text.startswith("json"):
                 text = text[4:]
+        
+        # Extract JSON object if wrapped in extra text
+        start = text.find("{")
+        end = text.rfind("}") + 1
+        if start != -1 and end > start:
+            text = text[start:end]
 
         result = json.loads(text)
         return result
 
-    except json.JSONDecodeError:
-        raise HTTPException(status_code=500, detail="AI response parse error")
+    except json.JSONDecodeError as e:
+        raise HTTPException(status_code=500, detail=f"JSON parse error: {str(e)} | Raw: {text[:200]}")
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
