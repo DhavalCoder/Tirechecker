@@ -8,79 +8,67 @@
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 body { font-family: -apple-system, sans-serif; background: #0a0a0a; color: #f0f0f0; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
 
+/* HEADER */
 header { padding: 10px 16px; background: #111; border-bottom: 1px solid #222; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
 header h1 { font-size: 1rem; font-weight: 800; }
 header h1 span { color: #e63946; }
 .by { font-size: 0.62rem; color: #555; margin-top: 1px; }
 .history-btn { background: #1a1a1a; border: 1px solid #333; color: #aaa; padding: 6px 12px; border-radius: 6px; font-size: 0.75rem; cursor: pointer; }
 
-/* CAMERA */
+/* ── PAGE: CAMERA ── */
+#cameraPage { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
 .camera-wrap { position: relative; flex: 1; background: #000; overflow: hidden; }
 #video { width: 100%; height: 100%; object-fit: cover; display: block; }
 
-/* Canvas overlays video for bounding boxes */
-#overlay { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.scan-guide { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+.scan-box { width: 75vw; max-width: 320px; aspect-ratio: 1; border: 2px solid rgba(230,57,70,0.7); border-radius: 12px; position: relative; }
+.corner { position: absolute; width: 16px; height: 16px; border-color: #e63946; border-style: solid; }
+.corner.tl { top: -2px; left: -2px; border-width: 3px 0 0 3px; }
+.corner.tr { top: -2px; right: -2px; border-width: 3px 3px 0 0; }
+.corner.bl { bottom: -2px; left: -2px; border-width: 0 0 3px 3px; }
+.corner.br { bottom: -2px; right: -2px; border-width: 0 3px 3px 0; }
 
-/* Scan frame guide */
-.scan-guide {
-  position: absolute; inset: 0;
-  display: flex; align-items: center; justify-content: center;
-  pointer-events: none;
-}
-.scan-box {
-  width: 75vw; max-width: 320px; aspect-ratio: 1;
-  border: 2px solid rgba(230,57,70,0.6);
-  border-radius: 12px;
-}
+.hint { position: absolute; bottom: 16px; left: 0; right: 0; text-align: center; font-size: 0.75rem; color: rgba(255,255,255,0.5); }
 
-/* Status bar */
-.status-bar {
-  position: absolute; bottom: 0; left: 0; right: 0;
-  background: linear-gradient(transparent, rgba(0,0,0,0.85));
-  padding: 20px 16px 12px;
-  display: flex; align-items: center; justify-content: space-between;
+.bottom-bar { padding: 16px 20px 28px; background: #111; border-top: 1px solid #222; display: flex; justify-content: center; flex-shrink: 0; }
+.shutter {
+  width: 70px; height: 70px; border-radius: 50%;
+  background: #e63946; border: 4px solid #fff;
+  cursor: pointer; box-shadow: 0 0 0 3px #e63946;
+  transition: transform 0.1s;
 }
-.detection-label {
-  font-size: 0.8rem; font-weight: 600;
-  background: rgba(230,57,70,0.9);
-  padding: 4px 12px; border-radius: 20px;
-}
-.fps-badge { font-size: 0.7rem; color: #aaa; }
+.shutter:active { transform: scale(0.93); }
 
-/* BOTTOM BAR */
-.bottom-bar { padding: 12px 20px 24px; background: #111; border-top: 1px solid #222; display: flex; gap: 10px; align-items: center; flex-shrink: 0; }
+/* ── PAGE: RESULT (terminal) ── */
+#resultPage { flex: 1; display: none; flex-direction: column; overflow: hidden; }
 
-.live-btn {
-  flex: 1; padding: 14px;
-  border: none; border-radius: 12px;
-  font-size: 0.95rem; font-weight: 700; cursor: pointer;
-  transition: background 0.2s;
-}
-.live-btn.start { background: #e63946; color: #fff; }
-.live-btn.stop { background: #333; color: #e63946; border: 1px solid #e63946; }
+.result-header { padding: 12px 16px; background: #111; border-bottom: 1px solid #222; display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.back-btn { background: none; border: 1px solid #333; color: #aaa; padding: 5px 12px; border-radius: 6px; font-size: 0.8rem; cursor: pointer; }
 
-.capture-btn {
-  background: #1a1a1a; border: 1px solid #333; color: #ccc;
-  border-radius: 12px; padding: 14px 16px; font-size: 0.85rem; cursor: pointer;
+.terminal {
+  flex: 1; overflow-y: auto; padding: 16px;
+  font-family: 'Courier New', monospace; font-size: 0.82rem;
+  line-height: 1.7; background: #0a0a0a;
 }
 
-/* RESULT PANEL */
-.result-panel {
-  position: absolute; bottom: 0; left: 0; right: 0;
-  background: #111; border-top: 1px solid #222; border-radius: 20px 20px 0 0;
-  padding: 20px; transform: translateY(100%); transition: transform 0.3s ease;
-  max-height: 50vh; overflow-y: auto;
-}
-.result-panel.show { transform: translateY(0); }
-.result-close { position: absolute; top: 14px; right: 16px; background: none; border: none; color: #666; font-size: 1.1rem; cursor: pointer; }
+.t-line { display: flex; gap: 8px; opacity: 0; animation: fadein 0.3s forwards; }
+.t-prompt { color: #e63946; flex-shrink: 0; }
+.t-text { color: #f0f0f0; }
+.t-text.green { color: #52b788; }
+.t-text.yellow { color: #ffd166; }
+.t-text.red { color: #e63946; }
+.t-text.muted { color: #666; }
+.t-text.bold { font-weight: 700; }
+.cursor { display: inline-block; width: 8px; height: 14px; background: #e63946; animation: blink 1s infinite; vertical-align: middle; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+@keyframes fadein { to { opacity: 1; } }
 
-.badge { display: inline-block; padding: 3px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; }
-.Safe { background: #2d6a4f; color: #b7e4c7; }
-.Warning { background: #7b4f00; color: #ffd166; }
-.Danger { background: #6b1a1a; color: #ffb3b3; }
+.annotated-wrap { padding: 0 16px 8px; flex-shrink: 0; }
+.annotated-wrap img { width: 100%; border-radius: 10px; border: 1px solid #222; }
 
-.det-list { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 6px; }
-.det-tag { background: #1a1a1a; border: 1px solid #333; border-radius: 6px; padding: 3px 10px; font-size: 0.75rem; }
+.result-bottom { padding: 12px 16px 24px; background: #111; border-top: 1px solid #222; flex-shrink: 0; }
+.scan-again { width: 100%; padding: 14px; background: #e63946; color: #fff; border: none; border-radius: 12px; font-size: 0.95rem; font-weight: 700; cursor: pointer; }
 
 /* HISTORY */
 .history-panel { position: fixed; inset: 0; background: #0a0a0a; z-index: 100; display: none; flex-direction: column; }
@@ -90,9 +78,13 @@ header h1 span { color: #e63946; }
 .history-list { flex: 1; overflow-y: auto; padding: 12px 16px; }
 .h-item { background: #1a1a1a; border: 1px solid #222; border-radius: 10px; padding: 12px; margin-bottom: 10px; display: flex; gap: 12px; align-items: center; }
 .h-thumb { width: 56px; height: 56px; border-radius: 8px; object-fit: cover; background: #333; flex-shrink: 0; }
-.h-info { flex: 1; font-size: 0.82rem; }
-.h-info h4 { font-weight: 700; margin-bottom: 3px; }
-.h-info p { color: #888; font-size: 0.72rem; }
+.h-info { flex: 1; }
+.h-info h4 { font-size: 0.85rem; font-weight: 700; margin-bottom: 3px; }
+.h-info p { font-size: 0.72rem; color: #888; }
+.badge { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 700; }
+.Safe { background: #2d6a4f; color: #b7e4c7; }
+.Warning { background: #7b4f00; color: #ffd166; }
+.Danger { background: #6b1a1a; color: #ffb3b3; }
 .empty { text-align: center; padding: 60px 20px; color: #666; }
 </style>
 </head>
@@ -106,45 +98,41 @@ header h1 span { color: #e63946; }
   <button class="history-btn" id="historyBtn">📋 History</button>
 </header>
 
-<div class="camera-wrap">
-  <video id="video" autoplay playsinline muted></video>
-  <canvas id="overlay"></canvas>
-
-  <div class="scan-guide" id="scanGuide">
-    <div class="scan-box"></div>
+<!-- CAMERA PAGE -->
+<div id="cameraPage">
+  <div class="camera-wrap">
+    <video id="video" autoplay playsinline muted></video>
+    <div class="scan-guide">
+      <div class="scan-box">
+        <div class="corner tl"></div>
+        <div class="corner tr"></div>
+        <div class="corner bl"></div>
+        <div class="corner br"></div>
+      </div>
+    </div>
+    <div class="hint">Align tyre tread inside the frame</div>
   </div>
-
-  <div class="status-bar" id="statusBar" style="display:none;">
-    <span class="detection-label" id="detLabel">Scanning...</span>
-    <span class="fps-badge" id="fpsBadge"></span>
-  </div>
-
-  <div class="result-panel" id="resultPanel">
-    <button class="result-close" id="resultClose">✕</button>
-    <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
-      <strong style="font-size:1rem;">Scan Result</strong>
-      <span class="badge" id="statusBadge"></span>
-    </div>
-    <img id="annotatedImg" style="width:100%; border-radius:8px; margin-bottom:12px;" />
-    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
-      <div style="font-size:2rem; font-weight:900; color:#e63946;" id="depthDisplay"></div>
-      <div style="font-size:0.72rem; color:#888;" id="confidenceText"></div>
-    </div>
-    <div style="background:#1a1a1a; border-radius:8px; padding:12px; font-size:0.83rem; line-height:1.6; margin-bottom:10px;">
-      <div id="summaryText"></div>
-      <div style="color:#e63946; font-weight:600; margin-top:6px;" id="recText"></div>
-    </div>
-    <div style="font-size:0.75rem; color:#888; margin-bottom:6px;">YOLO Detections:</div>
-    <div class="det-list" id="detTags"></div>
+  <div class="bottom-bar">
+    <button class="shutter" id="shutterBtn"></button>
   </div>
 </div>
 
-<div class="bottom-bar">
-  <button class="capture-btn" id="captureBtn">📸 Snapshot</button>
-  <button class="live-btn start" id="liveBtn">▶ Start Live Scan</button>
+<!-- RESULT PAGE -->
+<div id="resultPage">
+  <div class="result-header">
+    <button class="back-btn" id="backBtn">← Back</button>
+    <span style="font-size:0.85rem; color:#888; font-family:monospace;">tyrevision_ai ~ analysis</span>
+  </div>
+  <div class="annotated-wrap" id="annotatedWrap" style="display:none;">
+    <img id="annotatedImg" alt="Analysed tyre" />
+  </div>
+  <div class="terminal" id="terminal"></div>
+  <div class="result-bottom">
+    <button class="scan-again" id="scanAgainBtn">📸 Scan Another Tyre</button>
+  </div>
 </div>
 
-<!-- History -->
+<!-- HISTORY -->
 <div class="history-panel" id="historyPanel">
   <div class="history-head">
     <h2>📋 Scan History</h2>
@@ -157,180 +145,166 @@ header h1 span { color: #e63946; }
 
 <script>
 const video = document.getElementById('video');
-const overlay = document.getElementById('overlay');
-const ctx = overlay.getContext('2d');
-const liveBtn = document.getElementById('liveBtn');
-const captureBtn = document.getElementById('captureBtn');
-const statusBar = document.getElementById('statusBar');
-const scanGuide = document.getElementById('scanGuide');
-
+const terminal = document.getElementById('terminal');
 const API = window.location.origin + '/detect';
-let liveInterval = null;
-let isLive = false;
-let lastFps = 0, frameCount = 0, fpsTimer = Date.now();
 
 // Start camera
 navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false })
-  .then(s => {
-    video.srcObject = s;
-    video.onloadedmetadata = () => resizeOverlay();
-  })
+  .then(s => video.srcObject = s)
   .catch(() => alert('Camera permission denied.'));
 
-function resizeOverlay() {
-  overlay.width = video.videoWidth;
-  overlay.height = video.videoHeight;
-  overlay.style.width = '100%';
-  overlay.style.height = '100%';
-}
+// Shutter click
+document.getElementById('shutterBtn').addEventListener('click', async () => {
+  const canvas = document.getElementById('captureCanvas');
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext('2d').drawImage(video, 0, 0);
 
-window.addEventListener('resize', resizeOverlay);
+  canvas.toBlob(async (blob) => {
+    showResultPage();
+    terminal.innerHTML = '';
+    addLine('$', 'tyrevision --analyze tyre.jpg', 'muted');
+    await sleep(400);
+    addLine('>', 'Initializing YOLO-World detector...', 'muted');
+    await sleep(500);
+    addLine('>', 'Sending image to AI engine...', 'muted');
+    addCursor();
 
-// Capture frame as blob
-function captureBlob(quality = 0.7) {
-  const c = document.getElementById('captureCanvas');
-  c.width = video.videoWidth;
-  c.height = video.videoHeight;
-  c.getContext('2d').drawImage(video, 0, 0);
-  return new Promise(res => c.toBlob(res, 'image/jpeg', quality));
-}
-
-// Draw bounding boxes on overlay
-function drawBoxes(detections, vidW, vidH) {
-  ctx.clearRect(0, 0, overlay.width, overlay.height);
-  const scaleX = overlay.width / vidW;
-  const scaleY = overlay.height / vidH;
-
-  detections.forEach(d => {
-    const [x1, y1, x2, y2] = d.bbox;
-    const sx1 = x1 * scaleX, sy1 = y1 * scaleY;
-    const sw = (x2 - x1) * scaleX, sh = (y2 - y1) * scaleY;
-
-    ctx.strokeStyle = '#e63946';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(sx1, sy1, sw, sh);
-
-    const text = `${d.label} ${Math.round(d.confidence * 100)}%`;
-    ctx.fillStyle = '#e63946';
-    ctx.fillRect(sx1, sy1 - 20, ctx.measureText(text).width + 10, 20);
-    ctx.fillStyle = '#fff';
-    ctx.font = '13px -apple-system, sans-serif';
-    ctx.fillText(text, sx1 + 5, sy1 - 5);
-  });
-}
-
-// Send frame to backend
-async function sendFrame() {
-  try {
-    const blob = await captureBlob(0.6);
     const form = new FormData();
-    form.append('file', blob, 'frame.jpg');
+    form.append('file', blob, 'tyre.jpg');
 
-    const res = await fetch(API, { method: 'POST', body: form });
-    if (!res.ok) return;
-    const data = await res.json();
-
-    drawBoxes(data.detections, video.videoWidth, video.videoHeight);
-
-    // Update status label
-    const label = data.detections.length > 0
-      ? `${data.detections.length} detected`
-      : 'Scanning...';
-    document.getElementById('detLabel').textContent = label;
-
-    // FPS counter
-    frameCount++;
-    if (Date.now() - fpsTimer > 1000) {
-      document.getElementById('fpsBadge').textContent = frameCount + ' fps';
-      frameCount = 0;
-      fpsTimer = Date.now();
+    try {
+      const res = await fetch(API, { method: 'POST', body: form });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      removeCursor();
+      await renderTerminal(data);
+      saveHistory(data);
+      if (data.annotated_image) {
+        document.getElementById('annotatedImg').src = 'data:image/jpeg;base64,' + data.annotated_image;
+        document.getElementById('annotatedWrap').style.display = 'block';
+      }
+    } catch (e) {
+      removeCursor();
+      addLine('✗', 'Error: ' + e.message, 'red');
     }
-  } catch (e) { /* silent fail on live */ }
-}
+  }, 'image/jpeg', 0.85);
+});
 
-// Live scan toggle
-liveBtn.addEventListener('click', () => {
-  if (!isLive) {
-    isLive = true;
-    liveBtn.textContent = '⏹ Stop Live Scan';
-    liveBtn.className = 'live-btn stop';
-    scanGuide.style.display = 'none';
-    statusBar.style.display = 'flex';
-    liveInterval = setInterval(sendFrame, 1500); // every 1.5s
+async function renderTerminal(data) {
+  addLine('✓', 'Analysis complete.', 'green');
+  await sleep(300);
+  addLine('─', '─────────────────────────────', 'muted');
+  await sleep(200);
+
+  // YOLO detections
+  addLine('>', 'YOLO Detections:', 'muted');
+  await sleep(200);
+  if (data.detections && data.detections.length > 0) {
+    for (const d of data.detections) {
+      await sleep(150);
+      addLine('  ⚑', `${d.label}  [${Math.round(d.confidence * 100)}%]`, 'yellow');
+    }
   } else {
-    isLive = false;
-    liveBtn.textContent = '▶ Start Live Scan';
-    liveBtn.className = 'live-btn start';
-    scanGuide.style.display = 'flex';
-    statusBar.style.display = 'none';
-    clearInterval(liveInterval);
-    ctx.clearRect(0, 0, overlay.width, overlay.height);
+    await sleep(150);
+    addLine('  ✓', 'No visible defects detected', 'green');
   }
-});
 
-// Snapshot — send once and show detailed result
-captureBtn.addEventListener('click', async () => {
-  captureBtn.disabled = true;
-  captureBtn.textContent = '⏳';
-  try {
-    const blob = await captureBlob(0.85);
-    const form = new FormData();
-    form.append('file', blob, 'snap.jpg');
+  await sleep(300);
+  addLine('─', '─────────────────────────────', 'muted');
+  await sleep(200);
 
-    const res = await fetch(API, { method: 'POST', body: form });
-    if (!res.ok) throw new Error(await res.text());
-    const data = await res.json();
-    showResult(data);
-    saveHistory(data);
-  } catch (e) {
-    alert('Error: ' + e.message);
-  } finally {
-    captureBtn.disabled = false;
-    captureBtn.textContent = '📸 Snapshot';
-  }
-});
-
-function showResult(data) {
-  const badge = document.getElementById('statusBadge');
-  badge.textContent = data.status;
-  badge.className = 'badge ' + data.status;
-
+  // Tread depth
   const mm = data.tread_depth_mm;
-  document.getElementById('depthDisplay').textContent = mm !== null ? mm + ' mm' : '';
-  document.getElementById('confidenceText').textContent = 'Confidence: ' + (data.confidence || '');
-  document.getElementById('summaryText').textContent = data.summary || '';
-  document.getElementById('recText').textContent = data.recommendation ? '→ ' + data.recommendation : '';
-  document.getElementById('annotatedImg').src = 'data:image/jpeg;base64,' + data.annotated_image;
+  const depthColor = mm === null ? 'muted' : mm > 3 ? 'green' : mm >= 1.6 ? 'yellow' : 'red';
+  addLine('>', 'Tread Depth:', 'muted');
+  await sleep(200);
+  addLine('  →', mm !== null ? `${mm} mm` : 'Unable to determine', depthColor + ' bold');
 
-  const tags = document.getElementById('detTags');
-  tags.innerHTML = (data.detections || []).map(d =>
-    `<span class="det-tag">${d.label} ${Math.round(d.confidence*100)}%</span>`
-  ).join('') || '<span class="det-tag">No defects detected</span>';
+  await sleep(300);
+  // Status
+  const statusColor = { Safe: 'green', Warning: 'yellow', Danger: 'red' }[data.status] || 'yellow';
+  addLine('>', 'Safety Status:', 'muted');
+  await sleep(200);
+  addLine('  →', `${data.status}  (Confidence: ${data.confidence})`, statusColor + ' bold');
 
-  document.getElementById('resultPanel').classList.add('show');
+  await sleep(300);
+  addLine('─', '─────────────────────────────', 'muted');
+  await sleep(200);
+
+  // Summary
+  addLine('>', 'Summary:', 'muted');
+  await sleep(200);
+  addLine('  ', data.summary, '');
+
+  await sleep(300);
+  // Recommendation
+  addLine('>', 'Recommendation:', 'muted');
+  await sleep(200);
+  addLine('  ⚠', data.recommendation, 'yellow');
+
+  await sleep(400);
+  addLine('─', '─────────────────────────────', 'muted');
+  addLine('$', '█', 'muted');
 }
 
-document.getElementById('resultClose').addEventListener('click', () => {
-  document.getElementById('resultPanel').classList.remove('show');
-});
+function addLine(prompt, text, cls) {
+  const el = document.createElement('div');
+  el.className = 't-line';
+  el.style.animationDelay = '0s';
+  el.innerHTML = `<span class="t-prompt">${prompt}</span><span class="t-text ${cls}">${text}</span>`;
+  terminal.appendChild(el);
+  terminal.scrollTop = terminal.scrollHeight;
+}
+
+function addCursor() {
+  const el = document.createElement('div');
+  el.className = 't-line';
+  el.id = 'cursorLine';
+  el.innerHTML = `<span class="t-prompt">></span><span class="t-text muted">Processing <span class="cursor"></span></span>`;
+  terminal.appendChild(el);
+  terminal.scrollTop = terminal.scrollHeight;
+}
+
+function removeCursor() {
+  const el = document.getElementById('cursorLine');
+  if (el) el.remove();
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function showResultPage() {
+  document.getElementById('cameraPage').style.display = 'none';
+  const rp = document.getElementById('resultPage');
+  rp.style.display = 'flex';
+  document.getElementById('annotatedWrap').style.display = 'none';
+}
+
+function showCameraPage() {
+  document.getElementById('resultPage').style.display = 'none';
+  document.getElementById('cameraPage').style.display = 'flex';
+}
+
+document.getElementById('backBtn').addEventListener('click', showCameraPage);
+document.getElementById('scanAgainBtn').addEventListener('click', showCameraPage);
 
 // History
 function saveHistory(data) {
-  const h = JSON.parse(localStorage.getItem('yolo_th') || '[]');
-  h.unshift({ status: data.status, summary: data.summary, count: data.count, thumb: data.annotated_image, date: new Date().toISOString() });
-  localStorage.setItem('yolo_th', JSON.stringify(h.slice(0, 30)));
+  const h = JSON.parse(localStorage.getItem('tv_h') || '[]');
+  h.unshift({ status: data.status, summary: data.summary, depth: data.tread_depth_mm, thumb: data.annotated_image, date: new Date().toISOString() });
+  localStorage.setItem('tv_h', JSON.stringify(h.slice(0, 30)));
 }
 
 document.getElementById('historyBtn').addEventListener('click', () => {
-  const h = JSON.parse(localStorage.getItem('yolo_th') || '[]');
+  const h = JSON.parse(localStorage.getItem('tv_h') || '[]');
   const list = document.getElementById('historyList');
   list.innerHTML = h.length ? h.map((r, i) => `
     <div class="h-item">
-      <img class="h-thumb" src="data:image/jpeg;base64,${r.thumb}" />
+      ${r.thumb ? `<img class="h-thumb" src="data:image/jpeg;base64,${r.thumb}" />` : '<div class="h-thumb"></div>'}
       <div class="h-info">
-        <h4>Scan #${h.length - i} &nbsp;<span class="badge ${r.status}" style="font-size:0.65rem;">${r.status}</span></h4>
+        <h4>Scan #${h.length - i} &nbsp;<span class="badge ${r.status}">${r.status}</span></h4>
         <p>${new Date(r.date).toLocaleString('en-IN')}</p>
-        <p style="margin-top:3px;">${r.count} object(s) detected</p>
+        <p style="margin-top:3px;">${r.depth !== null ? r.depth + ' mm tread' : 'Depth N/A'}</p>
       </div>
     </div>`).join('') : '<div class="empty">No scans yet</div>';
   document.getElementById('historyPanel').classList.add('show');
