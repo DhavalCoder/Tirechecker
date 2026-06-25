@@ -22,7 +22,7 @@ app.add_middleware(
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-model = genai.GenerativeModel("gemini-1.5-flash")
+model = genai.GenerativeModel("gemini-2.0-flash")
 
 PROMPT = """You are a tyre safety expert. Analyse this tyre image for ALL visible problems.
 Respond ONLY in this exact JSON format, no markdown:
