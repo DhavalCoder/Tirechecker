@@ -126,7 +126,15 @@ header h1 span { color: #e63946; }
       <span class="badge" id="statusBadge"></span>
     </div>
     <img id="annotatedImg" style="width:100%; border-radius:8px; margin-bottom:12px;" />
-    <div style="font-size:0.85rem;" id="summaryText"></div>
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+      <div style="font-size:2rem; font-weight:900; color:#e63946;" id="depthDisplay"></div>
+      <div style="font-size:0.72rem; color:#888;" id="confidenceText"></div>
+    </div>
+    <div style="background:#1a1a1a; border-radius:8px; padding:12px; font-size:0.83rem; line-height:1.6; margin-bottom:10px;">
+      <div id="summaryText"></div>
+      <div style="color:#e63946; font-weight:600; margin-top:6px;" id="recText"></div>
+    </div>
+    <div style="font-size:0.75rem; color:#888; margin-bottom:6px;">YOLO Detections:</div>
     <div class="det-list" id="detTags"></div>
   </div>
 </div>
@@ -286,13 +294,18 @@ function showResult(data) {
   const badge = document.getElementById('statusBadge');
   badge.textContent = data.status;
   badge.className = 'badge ' + data.status;
-  document.getElementById('summaryText').textContent = data.summary;
+
+  const mm = data.tread_depth_mm;
+  document.getElementById('depthDisplay').textContent = mm !== null ? mm + ' mm' : '';
+  document.getElementById('confidenceText').textContent = 'Confidence: ' + (data.confidence || '');
+  document.getElementById('summaryText').textContent = data.summary || '';
+  document.getElementById('recText').textContent = data.recommendation ? '→ ' + data.recommendation : '';
   document.getElementById('annotatedImg').src = 'data:image/jpeg;base64,' + data.annotated_image;
 
   const tags = document.getElementById('detTags');
   tags.innerHTML = (data.detections || []).map(d =>
     `<span class="det-tag">${d.label} ${Math.round(d.confidence*100)}%</span>`
-  ).join('') || '<span class="det-tag">No objects detected</span>';
+  ).join('') || '<span class="det-tag">No defects detected</span>';
 
   document.getElementById('resultPanel').classList.add('show');
 }
