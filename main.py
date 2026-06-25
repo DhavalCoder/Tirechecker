@@ -2,14 +2,12 @@ from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-import google.generativeai as genai
-import os, base64, json
+import os, base64, json, httpx
 from dotenv import load_dotenv
 from PIL import Image
 import io
 
 load_dotenv()
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 app = FastAPI()
 
@@ -22,7 +20,8 @@ app.add_middleware(
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-model = genai.GenerativeModel("gemini-2.0-flash")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 
 PROMPT = """You are a tyre safety expert. Analyse this tyre image for ALL visible problems.
 Respond ONLY in this exact JSON format, no markdown:
@@ -55,12 +54,37 @@ async def analyze(file: UploadFile = File(...)):
         if max(image.size) > 1024:
             image.thumbnail((1024, 1024))
 
-        response = model.generate_content(
-            [PROMPT, image],
-            generation_config={"temperature": 0.1}
-        )
+        # Convert to base64
+        buffered = io.BytesIO()
+        image.save(buffered, format="JPEG")
+        img_b64 = base64.b64encode(buffered.getvalue()).decode()
 
-        text = response.text.strip()
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                GROQ_URL,
+                headers={
+                    "Authorization": f"Bearer {GROQ_API_KEY}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": "llama-3.2-90b-vision-preview",
+                    "messages": [
+                        {
+                            "role": "user",
+                            "content": [
+                                {"type": "text", "text": PROMPT},
+                                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_b64}"}}
+                            ]
+                        }
+                    ],
+                    "temperature": 0.1,
+                    "max_tokens": 500
+                }
+            )
+
+        data = response.json()
+        text = data["choices"][0]["message"]["content"].strip()
+        
         # Strip markdown if present
         if text.startswith("```"):
             text = text.split("```")[1]
