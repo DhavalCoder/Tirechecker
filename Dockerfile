@@ -11,5 +11,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 ENV YOLO_CONFIG_DIR=/tmp/Ultralytics
+ENV PORT=8000
 
-CMD sh -c "python -m uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"
+CMD sh -c "python -m uvicorn main:app --host 0.0.0.0 --port $PORT"
