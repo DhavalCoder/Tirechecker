@@ -12,4 +12,4 @@ COPY . .
 
 ENV YOLO_CONFIG_DIR=/tmp/Ultralytics
 
-CMD ["sh", "-c", "python -m uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+CMD sh -c "python -m uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"
