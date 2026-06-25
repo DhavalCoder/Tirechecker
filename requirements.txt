@@ -1,6 +1,8 @@
 fastapi
 uvicorn[standard]
 python-multipart
-httpx
+ultralytics
 Pillow
+opencv-python-headless
+numpy
 python-dotenv

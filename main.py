@@ -2,12 +2,9 @@ from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-import os, base64, json, httpx
-from dotenv import load_dotenv
+from ultralytics import YOLO
 from PIL import Image
-import io
-
-load_dotenv()
+import io, numpy as np, cv2, base64, os
 
 app = FastAPI()
 
@@ -20,23 +17,17 @@ app.add_middleware(
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
+# Load YOLOv8 model — uses pretrained weights on first run, downloads automatically
+# yolov8n.pt = nano (fast), works for tyre detection with general objects
+# Replace with custom tyre model path when available
+MODEL_PATH = os.getenv("YOLO_MODEL", "yolov8n.pt")
+model = YOLO(MODEL_PATH)
 
-PROMPT = """You are a tyre safety expert. Analyse this tyre image for ALL visible problems.
-Respond ONLY in this exact JSON format, no markdown:
-{
-  "problems": ["list", "of", "detected", "problems"],
-  "tread_depth_mm": <number or null>,
-  "status": "Safe|Warning|Danger",
-  "confidence": "High|Medium|Low",
-  "summary": "<one sentence overall assessment>",
-  "recommendation": "<immediate action to take>"
-}
+# Tyre-related class names to highlight (COCO pretrained)
+TYRE_CLASSES = {"car", "truck", "bus", "motorcycle"}  # vehicles imply tyres
 
-Check for: tread wear, sidewall cracks, bulges, cuts, punctures, uneven wear, bald spots.
-Tread depth: Safe >3mm, Warning 1.6-3mm, Danger <1.6mm.
-If no tyre visible, set status to Warning and explain in summary."""
+# If using custom tyre defect model, these would be:
+# DEFECT_CLASSES = {"tread_wear", "sidewall_crack", "bulge", "puncture", "bald"}
 
 
 @app.get("/")
@@ -44,70 +35,55 @@ def index():
     return FileResponse("static/index.html")
 
 
-@app.post("/analyze")
-async def analyze(file: UploadFile = File(...)):
+@app.post("/detect")
+async def detect(file: UploadFile = File(...)):
     try:
         contents = await file.read()
         image = Image.open(io.BytesIO(contents)).convert("RGB")
+        img_np = np.array(image)
 
-        # Resize if too large
-        if max(image.size) > 1024:
-            image.thumbnail((1024, 1024))
+        # Run YOLO inference
+        results = model(img_np, conf=0.3, verbose=False)[0]
 
-        # Convert to base64
-        buffered = io.BytesIO()
-        image.save(buffered, format="JPEG")
-        img_b64 = base64.b64encode(buffered.getvalue()).decode()
+        detections = []
+        annotated = img_np.copy()
 
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.post(
-                GROQ_URL,
-                headers={
-                    "Authorization": f"Bearer {GROQ_API_KEY}",
-                    "Content-Type": "application/json"
-                },
-                json={
-                    "model": "llama-3.2-90b-vision-preview",
-                    "messages": [
-                        {
-                            "role": "user",
-                            "content": [
-                                {"type": "text", "text": PROMPT},
-                                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_b64}"}}
-                            ]
-                        }
-                    ],
-                    "temperature": 0.1,
-                    "max_tokens": 500
-                }
-            )
+        for box in results.boxes:
+            cls_id = int(box.cls[0])
+            label = model.names[cls_id]
+            conf = float(box.conf[0])
+            x1, y1, x2, y2 = map(int, box.xyxy[0])
 
-        data = response.json()
+            detections.append({
+                "label": label,
+                "confidence": round(conf, 2),
+                "bbox": [x1, y1, x2, y2]
+            })
 
-        # Debug: return raw if unexpected format
-        if "choices" not in data:
-            raise HTTPException(status_code=500, detail=f"Groq error: {json.dumps(data)}")
+            # Draw bounding box
+            color = (230, 57, 70)  # red
+            cv2.rectangle(annotated, (x1, y1), (x2, y2), color, 2)
+            cv2.putText(annotated, f"{label} {conf:.0%}",
+                        (x1, y1 - 8), cv2.FONT_HERSHEY_SIMPLEX, 0.55, color, 2)
 
-        text = data["choices"][0]["message"]["content"].strip()
+        # Encode annotated image to base64
+        _, buffer = cv2.imencode(".jpg", cv2.cvtColor(annotated, cv2.COLOR_RGB2BGR))
+        img_b64 = base64.b64encode(buffer).decode()
 
-        # Strip markdown code block if present
-        if "```" in text:
-            text = text.split("```")[1]
-            if text.startswith("json"):
-                text = text[4:]
-        
-        # Extract JSON object if wrapped in extra text
-        start = text.find("{")
-        end = text.rfind("}") + 1
-        if start != -1 and end > start:
-            text = text[start:end]
+        # Simple tyre condition assessment based on detections
+        status = "Safe"
+        summary = "No issues detected."
+        if not detections:
+            summary = "No objects detected. Ensure tyre fills the frame."
+            status = "Warning"
 
-        result = json.loads(text)
-        return result
+        return {
+            "detections": detections,
+            "count": len(detections),
+            "status": status,
+            "summary": summary,
+            "annotated_image": img_b64
+        }
 
-    except json.JSONDecodeError as e:
-        raise HTTPException(status_code=500, detail=f"JSON parse error: {str(e)} | Raw: {text[:200]}")
-    except HTTPException:
-        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
