@@ -13,18 +13,19 @@ app = FastAPI()
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# YOLO-World: zero-shot detection with text prompts — no training needed
-yolo = YOLOWorld("yolov8s-world.pt")
-yolo.set_classes([
-    "tyre tread wear",
-    "bald tyre",
-    "tyre crack",
-    "sidewall bulge",
-    "tyre puncture",
-    "tyre cut",
-    "uneven tread wear",
-    "tyre"
-])
+# Lazy load YOLO — avoids blocking port bind on startup
+yolo = None
+
+def get_yolo():
+    global yolo
+    if yolo is None:
+        yolo = YOLOWorld("yolov8s-world.pt")
+        yolo.set_classes([
+            "tyre tread wear", "bald tyre", "tyre crack",
+            "sidewall bulge", "tyre puncture", "tyre cut",
+            "uneven tread wear", "tyre"
+        ])
+    return yolo
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
@@ -51,13 +52,13 @@ async def detect(file: UploadFile = File(...)):
         img_np = np.array(image)
 
         # --- YOLO-World detection ---
-        results = yolo(img_np, conf=0.25, verbose=False)[0]
+        results = get_yolo()(img_np, conf=0.25, verbose=False)[0]
         detections = []
         annotated = img_np.copy()
 
         for box in results.boxes:
             cls_id = int(box.cls[0])
-            label = yolo.names[cls_id]
+            label = get_yolo().names[cls_id]
             conf = float(box.conf[0])
             x1, y1, x2, y2 = map(int, box.xyxy[0])
             detections.append({"label": label, "confidence": round(conf, 2), "bbox": [x1, y1, x2, y2]})
